@@ -81,4 +81,4 @@ rbd <- function(data, tol = 1e-6, max_cols = min(10, ncol(data))) {
 
 test_df <- read.csv("data/C_Barnet.csv", header = TRUE)
 test_matrix <- as.matrix(test_df)
-result <- rbd(test_matrix, 1e-13)
+result <- rbd(test_matrix, 1e-13, 22)
