@@ -1,5 +1,5 @@
-verbose <- TRUE
-seed <- TRUE
+verbose <- FALSE
+seed <- FALSE
 start <- 10
 
 rbd <- function(data, tol = 1e-6, max_cols = min(10, ncol(data))) {
@@ -20,7 +20,7 @@ rbd <- function(data, tol = 1e-6, max_cols = min(10, ncol(data))) {
   cur_err <- tol + 1  # just to get the loop going
 
   # Preparation for efficient error evaluation
-  ftf <- rowSums(data^2)
+  ftf <- rowSums(t(data) * t(data))
   ataatxi <- matrix(0, col_count, max_cols)
 
   # The RBD greedy algorithm
@@ -40,7 +40,7 @@ rbd <- function(data, tol = 1e-6, max_cols = min(10, ncol(data))) {
     if (verbose) {
       cat('normi is ', normi, '\n')
     }
-    if (normi < 1e-7) {
+    if (normi < 1e-7) { # should this be tol?? it seems to be in paper write up
       cat("Reduced system getting singular - to stop with ", i - 1, "basis functions\n")
       bases <- bases[, 1 : i - 1]
       trans_mat <- trans_mat[1 : i - 1, ]
