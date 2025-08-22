@@ -2,10 +2,15 @@ verbose <- FALSE
 seed <- FALSE
 start <- 10
 
-rbd <- function(data, tol = 1e-6, max_cols = min(10, ncol(data))) {
-
+rbd <- function(data, tol = NULL, max_cols = NULL) {
   if (missing(data)) {
     stop("RBD needs at least one input, a matrix")
+  }
+  if (is.null(tol)) {
+    tol = 1e-6
+    max_cols = min(10, ncol(data))
+  } else if (is.null(max_cols)) {
+    max_cols = ncol(data)
   }
   # preparation of the algorithm
   col_count <- ncol(data)
