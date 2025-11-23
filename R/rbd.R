@@ -2,6 +2,22 @@ verbose <- FALSE
 seed <- FALSE
 start <- 10
 
+block_function <- function(i, N) {
+  I <- diag(N - i)
+  Z <- matrix(0, N-i, i-1)
+  ones <- matrix(1, N-i, 1)
+  cbind(Z, ones, -1*I)
+}
+
+transformation_matrix <- function(N) {
+  E <- block_function(1, N)
+  for(i in 2:N){
+    ith_block <- block_function(i, N)
+    E <- rbind(E, ith_block)
+  }
+  E
+}
+
 rbd <- function(data, tol = NULL, max_cols = NULL) {
   if (missing(data)) {
     stop("RBD needs at least one input, a matrix")
@@ -45,7 +61,7 @@ rbd <- function(data, tol = NULL, max_cols = NULL) {
     if (verbose) {
       cat('normi is ', normi, '\n')
     }
-    if (normi < 1e-7) { # should this be tol?? it seems to be in paper write up
+    if (normi < tol) {
       cat("Reduced system getting singular - to stop with ", i - 1, "basis functions\n")
       bases <- bases[, 1 : i - 1]
       trans_mat <- trans_mat[1 : i - 1, ]
@@ -73,7 +89,7 @@ rbd <- function(data, tol = NULL, max_cols = NULL) {
       cat("cur_err is ", cur_err, "\n")
     }
     if (cur_err <= tol) {
-      cat(sprintf("Reduced system getting accurate enough - to stop with %d basis functions\n", i))
+      #cat(sprintf("Reduced system getting accurate enough - to stop with %d basis functions\n", i))
       bases <- bases[, 1 : i]
       trans_mat <- trans_mat[1 : i, ]
     } else {
@@ -81,9 +97,74 @@ rbd <- function(data, tol = NULL, max_cols = NULL) {
     }
 
   }
-  return(list(bases = bases, trans_mat = trans_mat))
+  list(bases = bases, trans_mat = trans_mat)
 }
 
-test_df <- read.csv("data/C_Barnet.csv", header = TRUE)
-test_matrix <- as.matrix(test_df)
-result <- rbd(test_matrix, 1e-13, 22)
+compute_B <- function(C, tol = NULL, max_cols = NULL){
+  N <- dim(C)[1]
+  
+  E <- transformation_matrix(N)
+  
+  # Set defaults for exact decomposition
+  # E has rank N-1 or N, so we need max_cols >= rank(E)
+  if (is.null(tol)) {
+    tol <- 1e-13
+  }
+  if (is.null(max_cols)) {
+    max_cols <- N  # E has at most rank N
+  }
+  
+  E_tilde <- rbd(E, tol, max_cols)
+  E_rbd <- E_tilde$trans_mat
+  E_bases <- E_tilde$bases
+  B <- E_bases %*% (E_rbd %*% C %*% t(E_rbd)) %*% t(E_bases)
+  
+  B
+}
+
+##' Compute q vector directly from C using the explicit pipeline
+##'
+##' This function implements the sequence:
+##' E <- transformation_matrix(N)
+##' E_rbd <- rbd(E, tol = tol, max_cols = N)
+##' Y <- E_rbd$bases; E_tilde <- E_rbd$trans_mat
+##' C_tilde <- E_tilde %*% C %*% t(E_tilde)
+##' eig <- eigen(C_tilde)
+##' V <- Y %*% eig$vectors; Lambda <- eig$values
+##' q <- rowSums((V^2) * Lambda) / sum(Lambda)
+
+compute_design_probs_rbd <- function(C, tol = 1e-13, max_cols = NULL){
+
+  N <- dim(C)[1]
+
+  if (is.null(max_cols)) max_cols <- N
+
+  E <- transformation_matrix(N)
+  E_rbd_res <- rbd(E, tol = tol, max_cols = max_cols)
+  Y <- E_rbd_res$bases
+  E_tilde <- E_rbd_res$trans_mat
+
+  C_tilde <- E_tilde %*% C %*% t(E_tilde)
+  eig <- eigen(C_tilde, symmetric = TRUE)
+
+  V <- Y %*% eig$vectors
+  Lambda <- eig$values
+
+  denom <- sum(Lambda)
+  if (denom == 0) stop("sum of eigenvalues is zero; cannot normalise")
+
+  contributions <- sweep(V^2, 2, Lambda, FUN = "*")
+  q <- rowSums(contributions) / denom
+
+  q
+}
+
+
+
+
+
+
+
+
+
+
