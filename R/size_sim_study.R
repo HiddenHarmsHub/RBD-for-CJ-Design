@@ -169,23 +169,6 @@ iteration_params <- iteration_params %>% filter(
 parallel::mclapply(1:nrow(iteration_params), function(i) {
   params <- iteration_params[i, ]
   run_single_iteration(
-    iteration = iteration,
-    N = N[params$size_idx],
-    matrix_type = params$matrix_type,
-    rbd_tol = params$tols,
-    aux = params$aux,
-    output_dir = output_dir
-  )
-}, mc.cores = availableCores() - 1)
-
-
-
-## testing
-
-# Run iterations in parallel
-lapply(1:4, function(i) {
-  params <- iteration_params[i, ]
-  run_single_iteration(
     iteration = params$iteration,
     N = N[params$size_idx],
     matrix_type = params$matrix_type,
@@ -193,5 +176,4 @@ lapply(1:4, function(i) {
     aux = params$aux,
     output_dir = output_dir
   )
-})
-
+}, mc.cores = availableCores() - 1)
