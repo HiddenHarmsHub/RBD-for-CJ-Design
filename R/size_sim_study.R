@@ -1,5 +1,5 @@
 library(pacman)
-pacman::p_load(tidyverse, igraph, parallel, parallelly, MCMCpack)
+pacman::p_load(tidyverse, igraph, parallel, parallelly, MCMCpack, philentropy)
 source("R/rbd.R")
 source("R/brute_force_functions.R")
 
