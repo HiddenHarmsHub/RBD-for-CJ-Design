@@ -141,8 +141,8 @@ matrix_types <- bind_rows(
   T_matrices %>% mutate(aux = NA)
 )
 
-n.iter <- 2
-N <- c(4, 8)
+n.iter <- 100
+N <- 2^(3:8)
 
 iteration_params <- merge(
   expand.grid(
