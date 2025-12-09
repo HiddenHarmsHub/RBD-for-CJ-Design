@@ -112,11 +112,8 @@ run_single_iteration <- function(
   return(results)
 }
 
-# ================================================
-# Parallel Execution of Iterations
-# ================================================
 output_dir <- file.path("results", "simulation_study")
-dir.create(output_dir, showWarnings = FALSE)
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Create list of all iterations to run
 ER_matrices <- expand.grid(
@@ -147,7 +144,6 @@ matrix_types <- bind_rows(
 n.iter <- 2
 N <- c(4, 8)
 
-# Create iteration grid by expanding iterations and sizes, then merging with matrix type settings
 iteration_params <- merge(
   expand.grid(
     iteration = 1:n.iter,
@@ -206,7 +202,3 @@ write.csv(
   file = "results/combined_simulation_study_results.csv",
   row.names = FALSE
 )
-
-
-
-
