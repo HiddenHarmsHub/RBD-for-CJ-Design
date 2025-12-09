@@ -177,3 +177,36 @@ parallel::mclapply(1:nrow(iteration_params), function(i) {
     output_dir = output_dir
   )
 }, mc.cores = availableCores() - 1)
+
+
+# Combine output files
+data_files <- list.files(
+  path = "results/simulation_study",
+  pattern = "*.csv",
+  full.names = TRUE
+)
+
+combined_data <- lapply(data_files, function(file) {
+    # Extract parameters from the file name (tol and aux can be scientific notation or "NA")
+    params <- str_match(basename(file), "N(\\d+)_([a-zA-Z]+)_tol([^_]+)_aux([^_]+)_iteration(\\d+)")
+    data <- read.csv(file)
+    data$N <- as.numeric(params[2])
+    data$matrix_type <- params[3]
+    data$rbd_tol <- as.numeric(params[4])
+    data$aux <- ifelse(params[5] == "NA", NA_real_, as.numeric(params[5]))
+    data$iteration <- as.numeric(params[6])
+    data
+  }) %>%
+  bind_rows()
+
+
+# Save combined data to a new file
+write.csv(
+  combined_data,
+  file = "results/combined_simulation_study_results.csv",
+  row.names = FALSE
+)
+
+
+
+
