@@ -142,7 +142,7 @@ matrix_types <- bind_rows(
 )
 
 n.iter <- 100
-N <- 2^(3:8)
+N <- 2^(3:7)
 
 iteration_params <- merge(
   expand.grid(
