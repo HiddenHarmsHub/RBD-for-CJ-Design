@@ -1,4 +1,3 @@
-library(pacman)
 pacman::p_load(tidyverse, igraph, parallel, parallelly, MCMCpack, philentropy)
 source("R/rbd.R")
 source("R/brute_force_functions.R")
@@ -53,26 +52,17 @@ generate_matrix_inverse_wishart <- function(n, df = NULL, signal.variance = 1) {
 # ================================================
 # Worker Function for Parallel Execution
 # ================================================
-run_single_iteration <- function(
-  iteration,
+run_scenario <- function(
+  index, # Use index instead of iteration-specific parameters
   N,
-  matrix_type = "gnp",
-  rbd_tol = 1e-13,
-  aux = NULL,
+  matrix_type,
+  tol,
+  aux = NA,
+  n_iter, # Number of iterations to run
   output_dir = file.path("results", "simulation_study")
 ) {
   # Generate output file path
-  file_name <- file.path(
-    output_dir, 
-    paste0(
-      "N", N, 
-      "_", matrix_type, 
-      "_tol", rbd_tol, 
-      "_aux", aux*10, 
-      "_iteration", iteration,
-      ".csv"
-    )
-  )
+  file_name <- file.path(output_dir, paste0("results_", index, ".csv"))
 
   # Check if file exists
   if (file.exists(file_name)) {
@@ -80,36 +70,43 @@ run_single_iteration <- function(
     return(NULL)
   }
 
-  # Generate Covariance Matrix -----------------------------------------------
-  C <- switch(as.character(matrix_type),
-    "gnp" = generate_matrix_gnp(N, prob = aux),
-    "laplacian" = generate_matrix_laplacian(N, prob = aux),
-    "toeplitz" = generate_matrix_toeplitz(N),
-    "inverse_wishart" = generate_matrix_inverse_wishart(N),
-    stop("Unknown matrix_type: ", matrix_type)
-  )
+  output_list <- list()
 
-  # RBD Method ---------------------------------------------------------------
-  tic <- Sys.time()
-  design_probs_rbd <- compute_design_probs_rbd(C, tol = rbd_tol)
-  toc <- Sys.time()
-  time.rbd <- as.numeric(difftime(toc, tic, units = "secs"))
+  for(iter in 1:n_iter) {
+    # Generate Covariance Matrix -----------------------------------------------
+    C <- switch(as.character(matrix_type),
+      "gnp" = generate_matrix_gnp(N, prob = aux),
+      "laplacian" = generate_matrix_laplacian(N, prob = aux),
+      "toeplitz" = generate_matrix_toeplitz(N),
+      "inverse_wishart" = generate_matrix_inverse_wishart(N),
+      stop("Unknown matrix_type: ", matrix_type)
+    )
 
-  # Brute Force Method -------------------------------------------------------
-  tic <- Sys.time()
-  B_brute <- bruteforceB(C)
-  design_probs_brute <- compute_design_probs(N, B_brute)
-  toc <- Sys.time()
-  time.brute <- as.numeric(difftime(toc, tic, units = "secs"))
+    # RBD Method ---------------------------------------------------------------
+    tic <- Sys.time()
+    design_probs_rbd <- compute_design_probs_rbd(C, tol = tol)
+    toc <- Sys.time()
+    time.rbd <- as.numeric(difftime(toc, tic, units = "secs"))
 
-  # Compute KL Divergence
-  kl_divergence <- as.numeric(philentropy::KL(rbind(t(design_probs_brute), t(design_probs_rbd))))
+    # Brute Force Method -------------------------------------------------------
+    tic <- Sys.time()
+    B_brute <- bruteforceB(C)
+    design_probs_brute <- compute_design_probs(N, B_brute)
+    toc <- Sys.time()
+    time.brute <- as.numeric(difftime(toc, tic, units = "secs"))
 
-  # Save results to file
-  results <- data.frame(time.rbd = time.rbd, time.brute = time.brute, kl_divergence = kl_divergence)
-  write.csv(results, file = file_name, row.names = FALSE)
+    # Compute KL Divergence
+    kl_divergence <- as.numeric(philentropy::KL(rbind(t(design_probs_brute), t(design_probs_rbd))))
 
-  return(results)
+    # Save results to file
+    output_list[[iter]] <- data.frame(
+      time.rbd = time.rbd,
+      time.brute = time.brute,
+      kl_divergence = kl_divergence
+    )
+  }
+
+  write.csv(bind_rows(output_list), file = file_name, row.names = FALSE)
 }
 
 output_dir <- file.path("results", "simulation_study")
@@ -141,38 +138,46 @@ matrix_types <- bind_rows(
   T_matrices %>% mutate(aux = NA)
 )
 
-n.iter <- 100
-N <- 2^(3:7)
+n.iter <- 2
+Ns <- 2^(3:7)
+tols <- c(1e-10, 1e-12, 1e-14, 1e-16)
 
 iteration_params <- merge(
   expand.grid(
-    iteration = 1:n.iter,
-    size_idx = 1:length(N),
-    tols = c(1e-10, 1e-12, 1e-14, 1e-16)
+    N = Ns,
+    tol = tols
   ),
   matrix_types,
   all = TRUE
 )
 
-# Filter iteration_params to exclude existing files
-iteration_params <- iteration_params %>% filter(
-  !file.exists(paste0(
-    output_dir, "N", N[size_idx], "_", matrix_type, "_tol", tols, "_aux", aux, ".csv"
-  ))
-)
+# Create parameter index file
+param_index_file <- file.path(output_dir, "parameter_index.csv")
+if (!file.exists(param_index_file)) {
+  param_index <- iteration_params %>%
+    mutate(index = row_number()) %>%
+    dplyr::select(index, N, matrix_type, tol, aux)
+  write.csv(param_index, file = param_index_file, row.names = FALSE)
+} else {
+  param_index <- read.csv(param_index_file)
+}
 
 # Run iterations in parallel
-parallel::mclapply(1:nrow(iteration_params), function(i) {
-  params <- iteration_params[i, ]
-  run_single_iteration(
-    iteration = params$iteration,
-    N = N[params$size_idx],
-    matrix_type = params$matrix_type,
-    rbd_tol = params$tols,
-    aux = params$aux,
-    output_dir = output_dir
-  )
-}, mc.cores = availableCores() - 1)
+parallel::mclapply(
+  1:nrow(param_index),
+  function(i) {
+    run_scenario(
+      index = param_index$index[i],
+      N = param_index$N[i],
+      matrix_type = param_index$matrix_type[i],
+      tol = param_index$tol[i],
+      aux = param_index$aux[i],
+      n_iter = n.iter,
+      output_dir = output_dir
+    )
+  },
+  mc.cores = availableCores()
+)
 
 
 # Combine output files
@@ -183,18 +188,25 @@ data_files <- list.files(
 )
 
 combined_data <- lapply(data_files, function(file) {
-    # Extract parameters from the file name (tol and aux can be scientific notation or "NA")
-    params <- str_match(basename(file), "N(\\d+)_([a-zA-Z]+)_tol([^_]+)_aux([^_]+)_iteration(\\d+)")
+    # Extract index from the file name
+    index <- as.numeric(str_match(basename(file), "results_(\\d+)\\.csv")[2])
+
+    # Retrieve parameters from param_index
+    params <- param_index %>% filter(index == !!index)
+
+    # Read the data from the file
     data <- read.csv(file)
-    data$N <- as.numeric(params[2])
-    data$matrix_type <- params[3]
-    data$rbd_tol <- as.numeric(params[4])
-    data$aux <- ifelse(params[5] == "NA", NA_real_, as.numeric(params[5]))
-    data$iteration <- as.numeric(params[6])
+
+    # Add parameter details to the data
+    data$N <- params$N
+    data$matrix_type <- params$matrix_type
+    data$rbd_tol <- params$tol
+    data$aux <- params$aux
+    data$index <- index
+
     data
   }) %>%
   bind_rows()
-
 
 # Save combined data to a new file
 write.csv(
