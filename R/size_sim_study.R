@@ -115,12 +115,12 @@ dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 # Create list of all iterations to run
 ER_matrices <- expand.grid(
   matrix_type = "gnp",
-  aux = seq(from = 0.1, to = 0.9, by = 0.1)
+  aux = seq(from = 0.1, to = 0.8, by = 0.1)
 )
 
 RL_matrices <- expand.grid(
   matrix_type = "laplacian",
-  aux = seq(from = 0.1, to = 0.9, by = 0.1)
+  aux = seq(from = 0.1, to = 0.8, by = 0.1)
 )
 
 IW_matrices <- expand.grid(
@@ -178,7 +178,6 @@ parallel::mclapply(
   },
   mc.cores = availableCores()
 )
-
 
 # Combine output files
 data_files <- list.files(
