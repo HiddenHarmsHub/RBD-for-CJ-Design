@@ -140,7 +140,7 @@ matrix_types <- bind_rows(
 
 n.iter <- 100
 Ns <- 2^(3:7)
-tols <- c(1e-10, 1e-12, 1e-14, 1e-16)
+tols <- c(1e-6, 1e-8, 1e-10, 1e-12, 1e-14, 1e-16)
 
 iteration_params <- merge(
   expand.grid(
