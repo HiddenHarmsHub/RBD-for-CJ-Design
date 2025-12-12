@@ -1,33 +1,12 @@
-# RBD in R
+# A Reduced Basis Decomposition Approach to Efficient Data Collection in Pairwise Comparisons Studies
 
+This repository contains R code for computing reduced-basis decomposition (RBD) design probabilities and the corresponding brute-force computations for comparative judgement studies. The implementation provides:
 
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.bham.ac.uk/seymourg-bsbt/rbd-in-r.git
-git branch -M main
-# RBD in R
-
-This repository contains R code for computing reduced-basis design probabilities for networks (RBD) and the corresponding brute-force computations for comparison. The implementation provides:
-
-- A greedy reduced-basis decomposition (`rbd`) and helpers in `R/rbd.R`.
+- A greedy reduced-basis decomposition (`rbd`) and helpers in `R/rbd.R`. The main RBD algorithm is based on the [MATLAB code written by Yanlai Chen (2015)](https://www.mathworks.com/matlabcentral/fileexchange/50125-reduced-basis-decomposition). 
 - Brute-force construction of the pairwise matrix and spectral design probabilities in `R/brute_force_functions.R`.
 - Example scripts under `examples/` demonstrating usage and numeric checks.
 
-**Goal:** provide an efficient pipeline to compute edge-level design probabilities from a node covariance matrix `C` using a reduced-basis spectral decomposition.
-
-**Edge ordering:** edge rows follow `combn(N, 2)` ordering (pairs with `i < j`).
+**Goal:** provide an efficient pipeline to compute design probabilities for a comparative judgement study from a covariance matrix `C` using a reduced-basis spectral decomposition.
 
 ---
 
@@ -49,8 +28,8 @@ install.packages(c("expm", "igraph", "philentropy"))
 - `rbd(data, tol = NULL, max_cols = NULL)` — greedy reduced-basis decomposition used internally.
 - `transformation_matrix(N)` — builds the edge incidence-like transformation matrix `E` (rows correspond to edges ordered by `combn(N,2)`).
 - `compute_B(C, tol = NULL, max_cols = NULL)` — compute reduced B via RBD pipeline.
-- `compute_design_probs_rbd(C, tol = 1e-13, max_cols = NULL)` — compute design probabilities `q` directly from covariance `C` using the RBD pipeline.
 - `bruteforceB(C)` — build the full brute-force `B` matrix (size choose(N,2) x choose(N,2)).
+- `compute_design_probs_rbd(C, tol = 1e-13, max_cols = NULL)` — compute design probabilities `q` directly from covariance `C` using the RBD pipeline.
 - `compute_design_probs(N, B)` — compute brute-force design probabilities from `B` (keeps legacy name used in examples).
 
 Files:
@@ -82,13 +61,35 @@ q_brute <- compute_design_probs(nrow(C), B)
 philentropy::KL(rbind(t(q_brute), t(q_rbd)))
 ```
 
-The returned `q` vectors have length `choose(N,2)` and correspond to edges ordered by `combn(N,2)`.
 
 ---
+## Acknowlegdements
+The development of this software was supported by a UKRI Future Leaders Fellowship [MR/X034992/1].
 
-## Development notes
+## Licence for the Original Matlab Code
+The original MATLAB code for the RBD algorithm is avaliable at [https://www.mathworks.com/matlabcentral/fileexchange/50125-reduced-basis-decomposition](https://www.mathworks.com/matlabcentral/fileexchange/50125-reduced-basis-decomposition). It is subject to follow conditions:
 
-- Performance: `bruteforceB` is O(m^2) where m = choose(N,2). For large N use the RBD pipeline (`compute_design_probs_rbd`) which avoids forming the full `B`.
+Copyright (c) 2015, Yanlai Chen
+All rights reserved.
 
----
-Contact: create an issue in this repo or edit the files directly — I'm happy to help further.
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
