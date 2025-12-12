@@ -138,7 +138,7 @@ matrix_types <- bind_rows(
   T_matrices %>% mutate(aux = NA)
 )
 
-n.iter <- 2
+n.iter <- 100
 Ns <- 2^(3:7)
 tols <- c(1e-10, 1e-12, 1e-14, 1e-16)
 
@@ -152,7 +152,7 @@ iteration_params <- merge(
 )
 
 # Create parameter index file
-param_index_file <- file.path(output_dir, "parameter_index.csv")
+param_index_file <- file.path("results", "parameter_index.csv")
 if (!file.exists(param_index_file)) {
   param_index <- iteration_params %>%
     mutate(index = row_number()) %>%
