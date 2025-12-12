@@ -2,6 +2,16 @@ verbose <- FALSE
 seed <- FALSE
 start <- 10
 
+#' Build ith block of the edge transformation matrix
+#'
+#' Constructs the block used to assemble B. The block contains a pivot column of ones for node `i` and a
+#' negative identity for edges from node `i` to nodes `(i+1):N`.
+#'
+#' @param i Integer index of the current pivot node (1 <= i < N).
+#' @param N Number of objects in the study.
+#'
+#' @return A matrix with `N - i` rows and `N` columns contributing rows for edges
+#'   from node `i` to subsequent nodes.
 block_function <- function(i, N) {
   I <- diag(N - i)
   Z <- matrix(0, N-i, i-1)
@@ -9,6 +19,14 @@ block_function <- function(i, N) {
   cbind(Z, ones, -1*I)
 }
 
+#' Build full edge transformation matrix
+#'
+#' Assembles the full transformation matrix `E` for a study with `N` objects Rows
+#' are ordered according to `combn(N, 2)`. 
+#'
+#' @param N Integer objects in the study.
+#'
+#' @return A matrix with `choose(N, 2)` rows and `N` columns, one row per edge.
 transformation_matrix <- function(N) {
   E <- block_function(1, N)
   for(i in 2:N){
@@ -18,6 +36,20 @@ transformation_matrix <- function(N) {
   E
 }
 
+
+#' Greedy reduced-basis decomposition (RBD)
+#'
+#' Builds an orthonormal reduced basis from the columns of `data` using a greedy
+#' Gram-Schmidt procedure. At each step it picks the column that maximises the
+#' approximation error relative to the current basis.
+#'
+#' @param data Numeric matrix whose columns are candidate vectors.
+#' @param tol Numeric tolerance for stopping; defaults to `1e-6` when unspecified.
+#' @param max_cols Maximum number of basis vectors to select; defaults to min(10, ncol(data)) when tol is NULL, otherwise defaults to ncol(data).
+#'
+#' @return A list with elements:
+#'   - `bases`: matrix whose columns are orthonormal basis vectors.
+#'   - `trans_mat`: projection coefficients (basis^T * data).
 rbd <- function(data, tol = NULL, max_cols = NULL) {
   if (missing(data)) {
     stop("RBD needs at least one input, a matrix")
@@ -61,7 +93,7 @@ rbd <- function(data, tol = NULL, max_cols = NULL) {
     if (verbose) {
       cat('normi is ', normi, '\n')
     }
-    if (normi < tol) {
+    if (normi < tol) { 
       cat("Reduced system getting singular - to stop with ", i - 1, "basis functions\n")
       bases <- bases[, 1 : i - 1]
       trans_mat <- trans_mat[1 : i - 1, ]
@@ -89,7 +121,7 @@ rbd <- function(data, tol = NULL, max_cols = NULL) {
       cat("cur_err is ", cur_err, "\n")
     }
     if (cur_err <= tol) {
-      #cat(sprintf("Reduced system getting accurate enough - to stop with %d basis functions\n", i))
+      cat(sprintf("Reduced system getting accurate enough - to stop with %d basis functions\n", i))
       bases <- bases[, 1 : i]
       trans_mat <- trans_mat[1 : i, ]
     } else {
@@ -97,9 +129,21 @@ rbd <- function(data, tol = NULL, max_cols = NULL) {
     }
 
   }
-  list(bases = bases, trans_mat = trans_mat)
+  return(list(bases = bases, trans_mat = trans_mat))
 }
 
+
+#' Compute approximate pair of pairs matrix B via RBD
+#'
+#' Applies the reduced-basis decomposition to the transformation matrix `E`
+#' for an `N x N` covariance matrix `C`, yielding an approximate matrix
+#' `B`.
+#'
+#' @param C Numeric covariance matrix (N x N), symmetric.
+#' @param tol Numeric tolerance for the RBD step; defaults to `1e-13`.
+#' @param max_cols Maximum number of RBD basis vectors; defaults to `N`.
+#'
+#' @return A numeric matrix `B` representing the approximate pairs of pairs covariance.
 compute_B <- function(C, tol = NULL, max_cols = NULL){
   N <- dim(C)[1]
   
@@ -122,18 +166,19 @@ compute_B <- function(C, tol = NULL, max_cols = NULL){
   B
 }
 
-##' Compute q vector directly from C using the explicit pipeline
-##'
-##' This function implements the sequence:
-##' E <- transformation_matrix(N)
-##' E_rbd <- rbd(E, tol = tol, max_cols = N)
-##' Y <- E_rbd$bases; E_tilde <- E_rbd$trans_mat
-##' C_tilde <- E_tilde %*% C %*% t(E_tilde)
-##' eig <- eigen(C_tilde)
-##' V <- Y %*% eig$vectors; Lambda <- eig$values
-##' q <- rowSums((V^2) * Lambda) / sum(Lambda)
 
-compute_design_probs_rbd <- function(C, tol = 1e-13, max_cols = NULL){
+
+#' Compute edge design probabilities via RBD pipeline
+#'
+#' Runs the reduced-basis spectral pipeline to obtain design probabilities `q`
+#' for probabilites, given a covariance matrix `C`. Probabilities are ordered by `combn(N, 2)`.
+#
+# @param C Numeric covariance matrix (N x N), symmetric positive (semi)definite.
+# @param tol Numeric tolerance for the RBD step; default `1e-6`.
+# @param max_cols Maximum number of RBD basis vectors; default `N`.
+#
+# @return Numeric vector `q` of length `choose(N, 2)` with edge design probabilities summing to 1.
+compute_design_probs_rbd <- function(C, tol = 1e-6, max_cols = NULL){
 
   N <- dim(C)[1]
 
