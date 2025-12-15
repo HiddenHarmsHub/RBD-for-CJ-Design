@@ -1,6 +1,3 @@
-verbose <- FALSE
-seed <- FALSE
-start <- 10
 
 #' Build ith block of the edge transformation matrix
 #'
@@ -50,7 +47,7 @@ transformation_matrix <- function(N) {
 #' @return A list with elements:
 #'   - `bases`: matrix whose columns are orthonormal basis vectors.
 #'   - `trans_mat`: projection coefficients (basis^T * data).
-rbd <- function(data, tol = NULL, max_cols = NULL) {
+rbd <- function(data, tol = NULL, max_cols = NULL, verbose = FALSE, seed = FALSE, start = 10) {
   if (missing(data)) {
     stop("RBD needs at least one input, a matrix")
   }

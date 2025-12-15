@@ -1,3 +1,7 @@
+# Filter Laplacian with N=128, aux=0.5, varying tol
+filter_laplacian_n128_aux05_varying_tol <- function(df) {
+  df %>% filter(matrix_type == "laplacian", N == 128, aux == 0.5)
+}
 # Plot functions for p-varying (aux) Laplacian/ER plots
 plot_time_comparison_p <- function(df) {
   long <- df %>%
@@ -129,11 +133,34 @@ plot_time_comparison <- function(df) {
   p
 }
 
+# Fit linear model to log(time) vs N for both RBD and Standard methods
+fit_log_time_vs_log_N <- function(df) {
+  long <- df %>%
+    dplyr::select(N, time.rbd, time.brute) %>%
+    pivot_longer(c(time.rbd, time.brute), names_to = "method", values_to = "time_seconds") %>%
+    mutate(method = recode(method, "time.rbd" = "RBD", "time.brute" = "Standard"))
+
+  # Remove non-positive times to avoid log(0) or log(negative)
+  long <- long %>% filter(time_seconds > 0)
+
+  models <- long %>%
+    group_by(method) %>%
+    do(model = lm(log(time_seconds) ~ log(N), data = .))
+
+  # Print summary for each model
+  for (i in seq_len(nrow(models))) {
+    cat("\nLinear model for", models$method[i], ":\n")
+    print(summary(models$model[[i]]))
+  }
+
+  invisible(models)
+}
+
 plot_speedup <- function(df) {
   p <- ggplot(df, aes(x = factor(N), y = speedup)) +
     geom_boxplot(fill = "#06A77D", alpha = 0.7, outlier.alpha = 0.3) +
     geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 0.8) +
-    labs(x = "Edge Probability (p)", y = "Standard Time Taken / RBD Time Taken") +
+    labs(x = "Number of Study Objects (N)", y = "Standard Time Taken / RBD Time Taken") +
     scale_y_log10() +
     theme_minimal(base_size = 12) +
     theme(axis.title = element_text(size = 14.4))
@@ -281,3 +308,12 @@ table_to_latex(summary_table_lap, caption = "Laplacian Matrix Performance", labe
 # save_plot(plot_time_comparison(df_tol), 'er_n64_aux05_tol_time_comparison.png')
 # save_plot(plot_speedup(df_tol), 'er_n64_aux05_tol_speedup.png')
 # save_plot(plot_kl(df_tol), 'er_n64_aux05_tol_kl.png')
+
+
+
+df<-load_results();
+df_tol <- filter_laplacian_n128_aux05_varying_tol(df);
+
+df<-load_results();
+df <- filter_laplacian(df)
+fit_log_time_vs_log_N(df)
