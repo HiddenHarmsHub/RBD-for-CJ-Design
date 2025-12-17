@@ -2,5 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-results/simulation_study/
+results/
 plots/
+slurm_output/

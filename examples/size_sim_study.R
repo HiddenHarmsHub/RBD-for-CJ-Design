@@ -152,6 +152,13 @@ n.iter <- 100
 Ns <- 2^(3:7)
 tols <- c(1e-6, 1e-8, 1e-10, 1e-12, 1e-14, 1e-16)
 
+extra_scenario <- data.frame( 
+  "N" = 512,
+  "tol" = 1e-6,
+  "matrix_type" = "laplacian",
+  "aux" = 0.5
+)
+
 full_iteration_params <- merge(
   expand.grid(
     N = Ns,
@@ -164,18 +171,13 @@ full_iteration_params <- merge(
     matrix_type = as.character(matrix_type),
     aux = round(aux, 5)
   ) %>% 
-  bind_rows(data.frame( ## Also include an this scenario for the laplcian
-    "N" = 512,
-    "tol" = 1e-6,
-    "matrix_type" = "laplacian",
-    "aux" = 0.5
-  ))
+  bind_rows(extra_scenario)
 
 
 param_index_file <- file.path("results", "parameter_index.csv")
 
 if (!file.exists(param_index_file)) {
-  # Case 1: First run - create fresh index
+  # Create fresh file if none exists
   message("Creating new parameter index file...")
   param_index <- full_iteration_params %>%
     mutate(index = row_number()) %>%
@@ -184,14 +186,12 @@ if (!file.exists(param_index_file)) {
   write.csv(param_index, file = param_index_file, row.names = FALSE)
   
 } else {
-  # Case 2: Update existing run - append new params only
+  # Append
   message("Reading existing parameter index...")
   existing_index <- read.csv(param_index_file) %>%
     dplyr::select(index, N, tol, matrix_type, aux) %>% 
     mutate(aux = round(aux, 5))
   
-  # Identify new combinations by anti-joining the full set with the existing set
-  # Note: we exclude the 'index' column for comparison
   new_params <- anti_join(
     full_iteration_params,
     existing_index,
