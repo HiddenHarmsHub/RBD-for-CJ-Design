@@ -149,7 +149,7 @@ matrix_types <- bind_rows(
 )
 
 n.iter <- 100
-Ns <- 2^(3:9)
+Ns <- 2^(3:7)
 tols <- c(1e-6, 1e-8, 1e-10, 1e-12, 1e-14, 1e-16)
 
 full_iteration_params <- merge(
@@ -159,7 +159,18 @@ full_iteration_params <- merge(
   ),
   matrix_types,
   all = TRUE
-)
+) %>% 
+  mutate(
+    matrix_type = as.character(matrix_type),
+    aux = round(aux, 5)
+  ) %>% 
+  bind_rows(data.frame( ## Also include an this scenario for the laplcian
+    "N" = 512,
+    "tol" = 1e-6,
+    "matrix_type" = "laplacian",
+    "aux" = 0.5
+  ))
+
 
 param_index_file <- file.path("results", "parameter_index.csv")
 
@@ -175,13 +186,15 @@ if (!file.exists(param_index_file)) {
 } else {
   # Case 2: Update existing run - append new params only
   message("Reading existing parameter index...")
-  existing_index <- read.csv(param_index_file)
+  existing_index <- read.csv(param_index_file) %>%
+    dplyr::select(index, N, tol, matrix_type, aux) %>% 
+    mutate(aux = round(aux, 5))
   
   # Identify new combinations by anti-joining the full set with the existing set
   # Note: we exclude the 'index' column for comparison
   new_params <- anti_join(
-    full_iteration_params, 
-    existing_index, 
+    full_iteration_params,
+    existing_index,
     by = c("N", "tol", "matrix_type", "aux")
   )
   
@@ -254,4 +267,24 @@ write.csv(
   combined_data,
   file = "results/combined_simulation_study_results.csv",
   row.names = FALSE
+)
+
+
+
+y <- existing_index %>% filter(matrix_type == "gnp", aux == 0.3, tol == 1e-6)
+x <- full_iteration_params %>% filter(matrix_type == "gnp", aux == 0.3, tol == 1e-6)
+full_iteration_params %>% filter(matrix_type == "gnp", aux == 0.3)
+full_iteration_params %>% filter(matrix_type == "gnp", aux == full_iteration_params$aux[103])
+
+str(full_iteration_params$aux[103])
+
+
+full_iteration_params %>% filter(matrix_type == "gnp", aux == 0.3, tol == 1e-6)
+
+
+y
+anti_join(
+  full_iteration_params,
+  y,
+  by = c("N", "tol", "matrix_type", "aux")
 )
