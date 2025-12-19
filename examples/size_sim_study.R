@@ -1,3 +1,6 @@
+if (!requireNamespace("pacman", quietly = TRUE)) {
+  install.packages("pacman")
+}
 pacman::p_load(tidyverse, igraph, parallel, parallelly, MCMCpack, philentropy)
 source("R/rbd.R")
 source("R/brute_force_functions.R")
@@ -87,16 +90,23 @@ run_scenario <- function(
     design_probs_rbd <- compute_design_probs_rbd(C, tol = tol)
     toc <- Sys.time()
     time.rbd <- as.numeric(difftime(toc, tic, units = "secs"))
+    
+    if(N <= 128) {
+      tic <- Sys.time()
+      B_brute <- bruteforceB(C)
+      design_probs_brute <- compute_design_probs(N, B_brute)
+      toc <- Sys.time()
+      time.brute <- as.numeric(difftime(toc, tic, units = "secs"))
+  
+      # Compute KL Divergence
+      kl_divergence <- as.numeric(philentropy::KL(rbind(t(design_probs_brute), t(design_probs_rbd))))
+    } else {
+      time.brute <- NA
+      kl_divergence <- NA
+      
+    }
 
     # Brute Force Method -------------------------------------------------------
-    tic <- Sys.time()
-    B_brute <- bruteforceB(C)
-    design_probs_brute <- compute_design_probs(N, B_brute)
-    toc <- Sys.time()
-    time.brute <- as.numeric(difftime(toc, tic, units = "secs"))
-
-    # Compute KL Divergence
-    kl_divergence <- as.numeric(philentropy::KL(rbind(t(design_probs_brute), t(design_probs_rbd))))
 
     # Save results to file
     output_list[[iter]] <- data.frame(
@@ -142,24 +152,69 @@ n.iter <- 100
 Ns <- 2^(3:7)
 tols <- c(1e-6, 1e-8, 1e-10, 1e-12, 1e-14, 1e-16)
 
-iteration_params <- merge(
+extra_scenario <- data.frame( 
+  "N" = 512,
+  "tol" = 1e-6,
+  "matrix_type" = "laplacian",
+  "aux" = 0.5
+)
+
+full_iteration_params <- merge(
   expand.grid(
     N = Ns,
     tol = tols
   ),
   matrix_types,
   all = TRUE
-)
+) %>% 
+  mutate(
+    matrix_type = as.character(matrix_type),
+    aux = round(aux, 5)
+  ) %>% 
+  bind_rows(extra_scenario)
 
-# Create parameter index file
+
 param_index_file <- file.path("results", "parameter_index.csv")
+
 if (!file.exists(param_index_file)) {
-  param_index <- iteration_params %>%
+  # Create fresh file if none exists
+  message("Creating new parameter index file...")
+  param_index <- full_iteration_params %>%
     mutate(index = row_number()) %>%
-    dplyr::select(index, N, matrix_type, tol, aux)
+    dplyr::select(index, N, tol, matrix_type, aux)
+  
   write.csv(param_index, file = param_index_file, row.names = FALSE)
+  
 } else {
-  param_index <- read.csv(param_index_file)
+  # Append
+  message("Reading existing parameter index...")
+  existing_index <- read.csv(param_index_file) %>%
+    dplyr::select(index, N, tol, matrix_type, aux) %>% 
+    mutate(aux = round(aux, 5))
+  
+  new_params <- anti_join(
+    full_iteration_params,
+    existing_index,
+    by = c("N", "tol", "matrix_type", "aux")
+  )
+  
+  if (nrow(new_params) > 0) {
+    message("Found ", nrow(new_params), " new parameter combinations. Appending to index.")
+    
+    # Assign new indices starting from the previous maximum
+    start_index <- max(existing_index$index) + 1
+    new_params$index <- seq(start_index, start_index + nrow(new_params) - 1)
+    
+    # Ensure column order matches
+    new_params <- new_params %>% dplyr::select(index, N, matrix_type, tol, aux)
+    
+    # Combine and save
+    param_index <- bind_rows(existing_index, new_params)
+    write.csv(param_index, file = param_index_file, row.names = FALSE)
+  } else {
+    message("No new parameter combinations found.")
+    param_index <- existing_index
+  }
 }
 
 # Run iterations in parallel
