@@ -268,23 +268,3 @@ write.csv(
   file = "results/combined_simulation_study_results.csv",
   row.names = FALSE
 )
-
-
-
-y <- existing_index %>% filter(matrix_type == "gnp", aux == 0.3, tol == 1e-6)
-x <- full_iteration_params %>% filter(matrix_type == "gnp", aux == 0.3, tol == 1e-6)
-full_iteration_params %>% filter(matrix_type == "gnp", aux == 0.3)
-full_iteration_params %>% filter(matrix_type == "gnp", aux == full_iteration_params$aux[103])
-
-str(full_iteration_params$aux[103])
-
-
-full_iteration_params %>% filter(matrix_type == "gnp", aux == 0.3, tol == 1e-6)
-
-
-y
-anti_join(
-  full_iteration_params,
-  y,
-  by = c("N", "tol", "matrix_type", "aux")
-)
