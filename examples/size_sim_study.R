@@ -96,13 +96,14 @@ run_scenario <- function(
     time.brute <- as.numeric(difftime(toc, tic, units = "secs"))
 
     # Compute KL Divergence
-    kl_divergence <- as.numeric(philentropy::KL(rbind(t(design_probs_brute), t(design_probs_rbd))))
+    kl_divergence <- as.numeric(philentropy::KL(rbind(t(design_probs_brute), t(design_probs_rbd$q))))
 
     # Save results to file
     output_list[[iter]] <- data.frame(
       time.rbd = time.rbd,
       time.brute = time.brute,
-      kl_divergence = kl_divergence
+      kl_divergence = kl_divergence,
+      d = design_probs_rbd$d
     )
   }
 

@@ -25,7 +25,7 @@ C <- matrix(c(
 N <- nrow(C)
 
 ## Compute design probabilities via RBD
-design_probs_rbd <- compute_design_probs_rbd(C)
+design_probs_rbd <- compute_design_probs_rbd(C)$q
 
 ## Compute brute-force design probabilities
 B_brute <- bruteforceB(C)

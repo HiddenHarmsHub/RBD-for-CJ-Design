@@ -87,6 +87,16 @@ filter_laplacian <- function(df, ids = 391:395) {
   filter_by_type_ids(df, "laplacian", ids)
 }
 
+# Filter Laplacian with tol=1e-06, aux=0.5 across all N
+filter_laplacian_tol1e6_aux05 <- function(df) {
+  df %>% filter(matrix_type == "laplacian", rbd_tol == 1e-06, aux == 0.5)
+}
+
+# Filter Toeplitz with tol=1e-06, aux=0.5 across all N
+filter_toeplitz_tol1e6_aux05 <- function(df) {
+  df %>% filter(matrix_type == "toeplitz", rbd_tol == 1e-06, is.na(aux) | aux == 0.5)
+}
+
 # Filter ER (gnp) with N=64, tol=1e-06, varying aux (edge probability p)
 filter_er_n64_varying_p <- function(df) {
   df %>% filter(matrix_type == "gnp", N == 64, rbd_tol == 1e-06)
@@ -270,6 +280,102 @@ summarize_laplacian_n_varying_p <- function(df) {
   summary_data
 }
 
+# Create summary table for Toeplitz with tol=1e-6, aux=0.5 across all N values
+summarize_toeplitz_tol1e6_aux05 <- function(df) {
+  summary_data <- df %>%
+    filter_toeplitz_tol1e6_aux05() %>%
+    group_by(N) %>%
+    summarise(
+      RBD_min = round(min(time.rbd, na.rm = TRUE), 4),
+      RBD_mean = round(mean(time.rbd, na.rm = TRUE), 4),
+      RBD_median = round(median(time.rbd, na.rm = TRUE), 4),
+      RBD_max = round(max(time.rbd, na.rm = TRUE), 4),
+      Standard_min = round(min(time.brute, na.rm = TRUE), 4),
+      Standard_mean = round(mean(time.brute, na.rm = TRUE), 4),
+      Standard_median = round(median(time.brute, na.rm = TRUE), 4),
+      Standard_max = round(max(time.brute, na.rm = TRUE), 4),
+      .groups = 'drop'
+    ) %>%
+    rename(
+      'N' = N,
+      'RBD min (s)' = RBD_min,
+      'RBD mean (s)' = RBD_mean,
+      'RBD median (s)' = RBD_median,
+      'RBD max (s)' = RBD_max,
+      'Standard min (s)' = Standard_min,
+      'Standard mean (s)' = Standard_mean,
+      'Standard median (s)' = Standard_median,
+      'Standard max (s)' = Standard_max
+    ) %>%
+    arrange(N)
+
+  summary_data
+}
+
+# Create summary table for Inverse Wishart with tol=1e-6, aux=0.5 across all N values
+summarize_inverse_wishart_tol1e6_aux05 <- function(df) {
+  summary_data <- df %>%
+    filter_inverse_wishart_tol1e6_aux05() %>%
+    group_by(N) %>%
+    summarise(
+      RBD_min = round(min(time.rbd, na.rm = TRUE), 4),
+      RBD_mean = round(mean(time.rbd, na.rm = TRUE), 4),
+      RBD_median = round(median(time.rbd, na.rm = TRUE), 4),
+      RBD_max = round(max(time.rbd, na.rm = TRUE), 4),
+      Standard_min = round(min(time.brute, na.rm = TRUE), 4),
+      Standard_mean = round(mean(time.brute, na.rm = TRUE), 4),
+      Standard_median = round(median(time.brute, na.rm = TRUE), 4),
+      Standard_max = round(max(time.brute, na.rm = TRUE), 4),
+      .groups = 'drop'
+    ) %>%
+    rename(
+      'N' = N,
+      'RBD min (s)' = RBD_min,
+      'RBD mean (s)' = RBD_mean,
+      'RBD median (s)' = RBD_median,
+      'RBD max (s)' = RBD_max,
+      'Standard min (s)' = Standard_min,
+      'Standard mean (s)' = Standard_mean,
+      'Standard median (s)' = Standard_median,
+      'Standard max (s)' = Standard_max
+    ) %>%
+    arrange(N)
+
+  summary_data
+}
+
+# Create summary table for Laplacian with tol=1e-6, aux=0.5 across all N values
+summarize_laplacian_tol1e6_aux05 <- function(df) {
+  summary_data <- df %>%
+    filter_laplacian_tol1e6_aux05() %>%
+    group_by(N) %>%
+    summarise(
+      RBD_min = round(min(time.rbd, na.rm = TRUE), 4),
+      RBD_mean = round(mean(time.rbd, na.rm = TRUE), 4),
+      RBD_median = round(median(time.rbd, na.rm = TRUE), 4),
+      RBD_max = round(max(time.rbd, na.rm = TRUE), 4),
+      Standard_min = round(min(time.brute, na.rm = TRUE), 4),
+      Standard_mean = round(mean(time.brute, na.rm = TRUE), 4),
+      Standard_median = round(median(time.brute, na.rm = TRUE), 4),
+      Standard_max = round(max(time.brute, na.rm = TRUE), 4),
+      .groups = 'drop'
+    ) %>%
+    rename(
+      'N' = N,
+      'RBD min (s)' = RBD_min,
+      'RBD mean (s)' = RBD_mean,
+      'RBD median (s)' = RBD_median,
+      'RBD max (s)' = RBD_max,
+      'Standard min (s)' = Standard_min,
+      'Standard mean (s)' = Standard_mean,
+      'Standard median (s)' = Standard_median,
+      'Standard max (s)' = Standard_max
+    ) %>%
+    arrange(N)
+
+  summary_data
+}
+
 # Export table to LaTeX format
 table_to_latex <- function(summary_table, caption = "", label = "") {
   # Check if xtable is available
@@ -300,6 +406,12 @@ df <- load_results()
 summary_table_lap <- summarize_laplacian_n_varying_p(df)
 print(summary_table_lap, n = Inf)
 table_to_latex(summary_table_lap, caption = "Laplacian Matrix Performance", label = "tab:laplacian")
+#
+# # Generate Toeplitz table for tol=1e-6, aux=0.5 across N values:
+# df <- load_results()
+# summary_table_toep <- summarize_toeplitz_tol1e6_aux05(df)
+# print(summary_table_toep, n = Inf)
+# table_to_latex(summary_table_toep, caption = "Toeplitz Performance (tol=1e-6, aux=0.5)", label = "tab:toeplitz_tol1e6_aux05")
 # 
 # # Generate ER plots for varying tolerance (N=64, aux=0.5):
 # df <- load_results()

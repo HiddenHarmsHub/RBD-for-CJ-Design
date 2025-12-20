@@ -118,7 +118,7 @@ rbd <- function(data, tol = NULL, max_cols = NULL, verbose = FALSE, seed = FALSE
       cat("cur_err is ", cur_err, "\n")
     }
     if (cur_err <= tol) {
-      cat(sprintf("Reduced system getting accurate enough - to stop with %d basis functions\n", i))
+      #cat(sprintf("Reduced system getting accurate enough - to stop with %d basis functions\n", i))
       bases <- bases[, 1 : i]
       trans_mat <- trans_mat[1 : i, ]
     } else {
@@ -126,7 +126,7 @@ rbd <- function(data, tol = NULL, max_cols = NULL, verbose = FALSE, seed = FALSE
     }
 
   }
-  return(list(bases = bases, trans_mat = trans_mat))
+  return(list(bases = bases, trans_mat = trans_mat, d = i))
 }
 
 
@@ -149,7 +149,7 @@ compute_B <- function(C, tol = NULL, max_cols = NULL){
   # Set defaults for exact decomposition
   # E has rank N-1 or N, so we need max_cols >= rank(E)
   if (is.null(tol)) {
-    tol <- 1e-13
+    tol <- 1e-6
   }
   if (is.null(max_cols)) {
     max_cols <- N  # E has at most rank N
@@ -198,8 +198,10 @@ compute_design_probs_rbd <- function(C, tol = 1e-6, max_cols = NULL){
   contributions <- sweep(V^2, 2, Lambda, FUN = "*")
   q <- rowSums(contributions) / denom
 
-  q
+  return(list(q = q, d = E_rbd_res$d))
 }
+
+
 
 
 
