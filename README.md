@@ -58,7 +58,7 @@ B <- bruteforceB(C)
 q_brute <- compute_design_probs(nrow(C), B)
 
 # Compare (KL requires philentropy)
-philentropy::KL(rbind(t(q_brute), t(q_rbd)))
+philentropy::KL(rbind(t(q_brute), t(q_rbd$q)))
 ```
 
 
