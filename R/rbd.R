@@ -198,6 +198,10 @@ compute_design_probs_rbd <- function(C, tol = 1e-6, max_cols = NULL){
   contributions <- sweep(V^2, 2, Lambda, FUN = "*")
   q <- rowSums(contributions) / denom
 
+  item_labels <- if (!is.null(colnames(C))) colnames(C) else seq_len(N)
+  pairs <- combn(N, 2)
+  names(q) <- paste0(item_labels[pairs[1, ]], "-", item_labels[pairs[2, ]])
+
   return(list(q = q, d = E_rbd_res$d))
 }
 
