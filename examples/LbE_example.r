@@ -21,8 +21,8 @@ library(philentropy)
 ## Read in Comparisons
 tick <- Sys.time()
 comparisons <- read.csv("data/Jones2017.csv", header = TRUE, check.names = FALSE)
-pre_comparisons <- comparisons[1:700, ]  # Only first 10%er
-post_comparisons <- comparisons[-c(1:700), ]  # Only first 10%
+pre_comparisons <- comparisons[1:700, ]  # appox first 20%
+post_comparisons <- comparisons[-c(1:700), ]  # and approx last 80%
 
 ## Convert player names to numeric IDs (speedyBBTm requires numeric player IDs)
 all_players <- unique(c(pre_comparisons$candidate_chosen, pre_comparisons$candidate_not_chosen))
