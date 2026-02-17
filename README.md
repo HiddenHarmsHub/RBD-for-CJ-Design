@@ -13,12 +13,12 @@ This repository contains R code for computing reduced-basis decomposition (RBD) 
 ## Requirements
 
 - R (>= 4.0 recommended)
-- CRAN packages: `expm`, `igraph`, `philentropy` (for KL divergence in examples)
+- CRAN packages: `speedyBBT`, `expm`, `igraph`, `philentropy` (for KL divergence in examples)
 
 Install the R dependencies in an R session:
 
 ```r
-install.packages(c("expm", "igraph", "philentropy"))
+install.packages(c("speedyBBT", "expm", "igraph", "philentropy"))
 ```
 
 ---
