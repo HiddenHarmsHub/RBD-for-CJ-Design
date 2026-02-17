@@ -14,10 +14,14 @@ if (!requireNamespace("speedyBBT", quietly = TRUE)) {
 source("R/rbd.R")
 source("R/brute_force_functions.R")
 
+library(speedyBBT)
+library(expm)
+library(philentropy)
+
 ## Read in Comparisons
 tick <- Sys.time()
 comparisons <- read.csv("data/Jones2017.csv", header = TRUE, check.names = FALSE)
-pre_comparisons <- comparisons[1:700, ]  # Only first 10%
+pre_comparisons <- comparisons[1:700, ]  # Only first 10%er
 post_comparisons <- comparisons[-c(1:700), ]  # Only first 10%
 
 ## Convert player names to numeric IDs (speedyBBTm requires numeric player IDs)
@@ -31,6 +35,7 @@ pre_model <- speedyBBTm(outcome = rep(0, length(pre_comparisons$candidate_chosen
 
 ## Extract posterior covariance matrix for lambdas
 C <- cov(pre_model$lambda)
+colnames(C) <- rownames(C) <- all_players
 tock <- Sys.time()
 cat("Time taken to fit BT model and extract covariance matrix:", tock - tick, "\n")
 
@@ -43,6 +48,6 @@ cat("Time taken for RBD computation:", tock - tick, "\n")
 
 tick <- Sys.time()
 B_brute <- bruteforceB(C)
-design_probs_brute <- compute_design_probs(N, B_brute)44
+design_probs_brute <- compute_design_probs(B_brute, item_labels = all_players)
 tock <- Sys.time()
 cat("Time taken for brute-force computation:", tock - tick, "\n")
