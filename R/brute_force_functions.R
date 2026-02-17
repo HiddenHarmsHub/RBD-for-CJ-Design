@@ -38,14 +38,18 @@ bruteforceB <- function(C) {
 ## Compute the design probabilities by spectral decomposition of B.
 ## The returned vector has length choose(N,2) and sums to 1 (up to numerical error).
 ##
-## @param N Integer number of nodes.
 ## @param B Numeric matrix produced by `bruteforceB`.
+## @param N Integer number of nodes; inferred from `nrow(B)` if not supplied.
+## @param item_labels Optional character vector of length N with item names for labelling output.
 ## @return Numeric vector of length choose(N,2) with design probabilities.
 ## @examples
 ## C <- diag(4)
 ## B <- bruteforceB(C)
-## compute_design_probs(4, B)
-compute_design_probs <- function(N, B) {
+## compute_design_probs(B)
+compute_design_probs <- function(B, N = NULL, item_labels = NULL) {
+
+  if (is.null(N)) N <- (1 + sqrt(1 + 8 * nrow(B))) / 2
+  N <- as.integer(round(N))
 
   eig <- eigen(B)
   values <- eig$values
@@ -55,6 +59,10 @@ compute_design_probs <- function(N, B) {
 
   probs <- (vectors^2) %*% values
   probs <- as.numeric(probs / weights)
+
+  if (is.null(item_labels)) item_labels <- seq_len(N)
+  pairs <- combn(N, 2)
+  names(probs) <- paste0(item_labels[pairs[1, ]], "-", item_labels[pairs[2, ]])
 
   probs
 }
